@@ -37,6 +37,7 @@ interface TeacherAdminPanelProps {
   preselectedGrade?: string;
   preselectedSection?: string;
   onCloseAdmin?: () => void;
+  loggedInTeacher?: { name: string; username: string } | null;
 }
 
 export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
@@ -46,6 +47,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
   preselectedGrade,
   preselectedSection,
   onCloseAdmin,
+  loggedInTeacher,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
   const [formSection, setFormSection] = useState<string>(preselectedSection || 'A');
   const [formSubject, setFormSubject] = useState<string>('');
   const [customSubject, setCustomSubject] = useState<string>('');
-  const [formTeacher, setFormTeacher] = useState<string>('');
+  const [formTeacher, setFormTeacher] = useState<string>(loggedInTeacher?.name || '');
   const [formDate, setFormDate] = useState<string>(todayStr);
   const [formStartTime, setFormStartTime] = useState<string>('');
   const [formEndTime, setFormEndTime] = useState<string>('');
@@ -74,29 +76,9 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
   const [formTopic, setFormTopic] = useState<string>('');
   const [formNotes, setFormNotes] = useState<string>('');
 
-  // Auto-parse zoom link to extract meeting ID & passcode if provided
+  // Handle Zoom URL change - Meeting ID and Passcode remain strictly optional manual fields
   const handleZoomUrlChange = (url: string) => {
     setFormZoomUrl(url);
-
-    // Try extracting meeting id (e.g. /j/1234567890)
-    const matchId = url.match(/\/j\/(\d+)/);
-    if (matchId && matchId[1]) {
-      // Format as 3-4-4 spacing
-      const raw = matchId[1];
-      if (raw.length === 10) {
-        setFormMeetingId(`${raw.slice(0, 3)} ${raw.slice(3, 6)} ${raw.slice(6)}`);
-      } else if (raw.length === 11) {
-        setFormMeetingId(`${raw.slice(0, 3)} ${raw.slice(3, 7)} ${raw.slice(7)}`);
-      } else {
-        setFormMeetingId(raw);
-      }
-    }
-
-    // Try extracting passcode (?pwd=...)
-    const matchPwd = url.match(/[?&]pwd=([^&#]+)/);
-    if (matchPwd && matchPwd[1]) {
-      setFormPasscode(decodeURIComponent(matchPwd[1]));
-    }
   };
 
   const handleOpenCreateModal = (presetGrade?: string, presetSec?: string) => {
@@ -105,7 +87,8 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
     setFormSection(presetSec || preselectedSection || 'A');
     setFormSubject('');
     setCustomSubject('');
-    setFormTeacher('');
+    // Automatically enter teacher name from the online sheet
+    setFormTeacher(loggedInTeacher?.name || '');
     setFormDate(todayStr);
     setFormStartTime('');
     setFormEndTime('');
@@ -268,12 +251,12 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
         <div className="flex items-start gap-4">
           <SchoolLogo size="lg" showBackground={true} className="mt-1 hidden sm:flex" />
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded">
-                Faculty & Teacher Administration
+                {loggedInTeacher ? `Teacher: ${loggedInTeacher.name}` : 'Faculty & Teacher Administration'}
               </span>
-              <span className="text-xs text-slate-500">
-                Authenticated Session
+              <span className="text-xs text-slate-500 font-mono">
+                {loggedInTeacher ? `(${loggedInTeacher.username})` : 'Authenticated Session'}
               </span>
             </div>
             <h1 className="text-2xl font-bold font-serif text-slate-900 mt-2">
@@ -295,6 +278,8 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
           </button>
         </div>
       </div>
+
+
 
       {/* Feedback Toast */}
       {feedbackMsg && (
@@ -622,9 +607,16 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Teacher Name *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold text-slate-700 uppercase tracking-wider">
+                      Teacher Name *
+                    </label>
+                    {loggedInTeacher?.name && (
+                      <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-medium">
+                        Auto-filled from Classera
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={formTeacher}
@@ -697,7 +689,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white outline-hidden font-mono"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Tip: Paste a full Zoom invite link and the system will automatically extract Meeting ID & Passcode.
+                    Tip: Paste your Zoom or external video meeting link. Meeting ID and Passcode below are optional.
                   </p>
                 </div>
 

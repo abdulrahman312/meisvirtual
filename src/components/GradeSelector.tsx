@@ -21,19 +21,25 @@ interface GradeSelectorProps {
   onSelectGrade: (grade: string) => void;
   classes: VirtualClass[];
   currentTime: Date;
+  allowedGrades?: string[];
 }
 
 export const GradeSelector: React.FC<GradeSelectorProps> = ({
   onSelectGrade,
   classes,
   currentTime,
+  allowedGrades,
 }) => {
   const [selectedStage, setSelectedStage] = useState<SchoolStage>('all');
 
+  const baseGrades = allowedGrades && allowedGrades.length > 0
+    ? ALL_GRADES.filter((g) => allowedGrades.some((ag) => ag.toLowerCase() === g.id.toLowerCase()))
+    : ALL_GRADES;
+
   // Filter grades by category stage
   const filteredGrades = selectedStage === 'all'
-    ? ALL_GRADES
-    : ALL_GRADES.filter((g) => g.stage === selectedStage);
+    ? baseGrades
+    : baseGrades.filter((g) => g.stage === selectedStage);
 
   // Group classes by grade to show active counters
   const getGradeStats = (gradeId: string) => {
@@ -55,11 +61,11 @@ export const GradeSelector: React.FC<GradeSelectorProps> = ({
   };
 
   const stageTabs: { id: SchoolStage; label: string; count: number }[] = [
-    { id: 'all', label: 'All Grades', count: ALL_GRADES.length },
-    { id: 'kindergarten', label: 'Kindergarten', count: 3 },
-    { id: 'elementary', label: 'Elementary', count: 5 },
-    { id: 'middle', label: 'Middle School', count: 3 },
-    { id: 'high', label: 'High School', count: 5 },
+    { id: 'all', label: 'All Grades', count: baseGrades.length },
+    { id: 'kindergarten', label: 'Kindergarten', count: baseGrades.filter((g) => g.stage === 'kindergarten').length },
+    { id: 'elementary', label: 'Elementary', count: baseGrades.filter((g) => g.stage === 'elementary').length },
+    { id: 'middle', label: 'Middle School', count: baseGrades.filter((g) => g.stage === 'middle').length },
+    { id: 'high', label: 'High School', count: baseGrades.filter((g) => g.stage === 'high').length },
   ];
 
   return (

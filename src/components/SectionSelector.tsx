@@ -16,6 +16,8 @@ interface SectionSelectorProps {
   onSelectSection: (section: string) => void;
   classes: VirtualClass[];
   currentTime: Date;
+  allowedSection?: string;
+  allowBackToGrades?: boolean;
 }
 
 export const SectionSelector: React.FC<SectionSelectorProps> = ({
@@ -24,8 +26,15 @@ export const SectionSelector: React.FC<SectionSelectorProps> = ({
   onSelectSection,
   classes,
   currentTime,
+  allowedSection,
+  allowBackToGrades = true,
 }) => {
   const [filterActiveOnly, setFilterActiveOnly] = useState(false);
+
+  const isRestrictedToSingleSection =
+    allowedSection &&
+    allowedSection.trim().toLowerCase() !== 'no section' &&
+    allowedSection.trim() !== '';
 
   const gradeDef = ALL_GRADES.find(
     (g) =>
@@ -71,28 +80,42 @@ export const SectionSelector: React.FC<SectionSelectorProps> = ({
     };
   };
 
-  // Filter sections if requested
-  const sectionsToDisplay = filterActiveOnly
-    ? ALL_SECTIONS.filter((letter) => getSectionStats(letter).total > 0)
+  // Filter sections if requested or restricted to single section
+  const availableSections = isRestrictedToSingleSection
+    ? [allowedSection!.trim().toUpperCase()]
     : ALL_SECTIONS;
+
+  const sectionsToDisplay = filterActiveOnly
+    ? availableSections.filter((letter) => getSectionStats(letter).total > 0)
+    : availableSections;
 
   return (
     <div className="space-y-6">
       {/* Navigation Breadcrumb */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <button
-          onClick={onBackToGrades}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-indigo-700 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors shadow-2xs"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to All Grades</span>
-        </button>
+        {allowBackToGrades ? (
+          <button
+            onClick={onBackToGrades}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-indigo-700 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors shadow-2xs"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to All Grades</span>
+          </button>
+        ) : (
+          <div className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg">
+            <span>Assigned Enrollment: {gradeDef.label}</span>
+          </div>
+        )}
 
         <div className="text-xs text-slate-500 flex items-center gap-1.5">
-          <span className="cursor-pointer hover:underline" onClick={onBackToGrades}>
-            All Grades
-          </span>
-          <ChevronRight className="w-3 h-3 text-slate-400" />
+          {allowBackToGrades && (
+            <>
+              <span className="cursor-pointer hover:underline" onClick={onBackToGrades}>
+                All Grades
+              </span>
+              <ChevronRight className="w-3 h-3 text-slate-400" />
+            </>
+          )}
           <span className="font-semibold text-slate-900">{gradeDef.label}</span>
           <ChevronRight className="w-3 h-3 text-slate-400" />
           <span className="text-indigo-700 font-medium">Select Section</span>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from './components/Header';
 import { GradeSelector } from './components/GradeSelector';
 import { SectionSelector } from './components/SectionSelector';
@@ -6,28 +6,45 @@ import { ClassroomView } from './components/ClassroomView';
 import { LiveClassesView } from './components/LiveClassesView';
 import { TeacherAdminPanel } from './components/TeacherAdminPanel';
 import { TeacherAuthModal } from './components/TeacherAuthModal';
+import { StudentGate } from './components/StudentGate';
+import { StudentBanner } from './components/StudentBanner';
 import { Footer } from './components/Footer';
 import { VirtualClass } from './types';
 import { fetchClasses, subscribeToClasses } from './services/api';
+import { 
+  getStoredStudent, 
+  storeStudent, 
+  clearStoredStudent, 
+  StudentRecord 
+} from './services/studentService';
+import {
+  getStoredTeacher,
+  storeTeacher,
+  clearStoredTeacher,
+  TeacherRecord,
+} from './services/teacherService';
 
 export default function App() {
   const [classes, setClasses] = useState<VirtualClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   
-  // Navigation view state
-  const [currentView, setCurrentView] = useState<'grades' | 'live' | 'admin'>('grades');
-  const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  // Student authentication state - always starts at the ID entry form
+  const [currentStudent, setCurrentStudent] = useState<StudentRecord | null>(null);
+  const [grade10Tab, setGrade10Tab] = useState<'regular' | 'pure_ap'>('regular');
 
   // Teacher authentication state
-  const [isTeacherLoggedIn, setIsTeacherLoggedIn] = useState<boolean>(() => {
-    return sessionStorage.getItem('meis_teacher_session') === 'true';
-  });
+  const [loggedInTeacher, setLoggedInTeacher] = useState<TeacherRecord | null>(() => getStoredTeacher());
+  const [isTeacherLoggedIn, setIsTeacherLoggedIn] = useState<boolean>(() => Boolean(getStoredTeacher()));
   const [isTeacherAuthModalOpen, setIsTeacherAuthModalOpen] = useState(false);
-  const [teacherName, setTeacherName] = useState<string>(() => {
-    return sessionStorage.getItem('meis_teacher_name') || 'Faculty Member';
+  const [teacherName, setTeacherName] = useState<string>(() => getStoredTeacher()?.name || 'Faculty Member');
+
+  // Navigation view state
+  const [currentView, setCurrentView] = useState<'grades' | 'live' | 'admin'>(() => {
+    return getStoredTeacher() ? 'admin' : 'grades';
   });
+  const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
   // Subscribe to real-time Firestore updates
   useEffect(() => {
@@ -63,7 +80,71 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Handlers for student navigation
+  // Compute authorized classes for currently authenticated viewer
+  const authorizedClasses = useMemo(() => {
+    if (isTeacherLoggedIn || !currentStudent) {
+      return classes;
+    }
+    const isGrade10 = currentStudent.grade.toLowerCase() === 'grade 10';
+    const hasNoSection = currentStudent.section.toLowerCase() === 'no section' || !currentStudent.section;
+
+    return classes.filter((c) => {
+      // Grade 10 students can see their grade 10 classes + all Pure AP classes
+      if (isGrade10 && (c.grade.toLowerCase() === 'pure ap' || c.grade.toLowerCase() === 'grade 10')) {
+        if (c.grade.toLowerCase() === 'pure ap') return true;
+        if (hasNoSection) return true;
+        return c.section.toUpperCase() === currentStudent.section.toUpperCase();
+      }
+
+      const matchesGrade = c.grade.toLowerCase() === currentStudent.grade.toLowerCase();
+      if (!matchesGrade) return false;
+
+      if (hasNoSection) return true;
+      return c.section.toUpperCase() === currentStudent.section.toUpperCase();
+    });
+  }, [classes, isTeacherLoggedIn, currentStudent]);
+
+  // Handlers for student verification
+  const handleStudentVerified = (student: StudentRecord) => {
+    setCurrentStudent(student);
+    storeStudent(student);
+    setGrade10Tab('regular');
+
+    const hasNoSection = student.section.toLowerCase() === 'no section' || !student.section;
+    setSelectedGrade(student.grade);
+    if (hasNoSection) {
+      setSelectedSection(null);
+    } else {
+      setSelectedSection(student.section);
+    }
+    setCurrentView('grades');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStudentLogout = () => {
+    clearStoredStudent();
+    setCurrentStudent(null);
+    setSelectedGrade(null);
+    setSelectedSection(null);
+    setGrade10Tab('regular');
+    setCurrentView('grades');
+  };
+
+  // Switch between Grade 10 regular class and Pure AP class
+  const handleSwitchGrade10Tab = (tab: 'regular' | 'pure_ap') => {
+    setGrade10Tab(tab);
+    if (tab === 'pure_ap') {
+      setSelectedGrade('Pure AP');
+      setSelectedSection('A');
+    } else if (currentStudent) {
+      setSelectedGrade('Grade 10');
+      const hasNoSection = currentStudent.section.toLowerCase() === 'no section' || !currentStudent.section;
+      setSelectedSection(hasNoSection ? null : currentStudent.section);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handlers for navigation
   const handleSelectGrade = (gradeId: string) => {
     setSelectedGrade(gradeId);
     setSelectedSection(null);
@@ -78,6 +159,10 @@ export default function App() {
   };
 
   const handleBackToGrades = () => {
+    if (currentStudent) {
+      // Students cannot exit back to all grades
+      return;
+    }
     setSelectedGrade(null);
     setSelectedSection(null);
     setCurrentView('grades');
@@ -97,23 +182,68 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Teacher login
-  const handleTeacherLoginSuccess = (name: string) => {
+  // Teacher login handlers
+  const handleTeacherLoginSuccess = (name: string, username: string) => {
+    const teacherObj: TeacherRecord = { name, username };
     setIsTeacherLoggedIn(true);
     setTeacherName(name);
-    sessionStorage.setItem('meis_teacher_session', 'true');
-    sessionStorage.setItem('meis_teacher_name', name);
+    setLoggedInTeacher(teacherObj);
+    storeTeacher(teacherObj);
     setCurrentView('admin');
   };
 
   const handleTeacherLogout = () => {
     setIsTeacherLoggedIn(false);
-    sessionStorage.removeItem('meis_teacher_session');
-    sessionStorage.removeItem('meis_teacher_name');
+    setLoggedInTeacher(null);
+    clearStoredTeacher();
     if (currentView === 'admin') {
       setCurrentView('grades');
     }
   };
+
+  // If NOT teacher logged in AND NOT student logged in: Show Student Security Gate
+  if (!isTeacherLoggedIn && !currentStudent) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+        <Header
+          currentView="grades"
+          onNavigate={() => {}}
+          classes={classes}
+          currentTime={currentTime}
+          isTeacherLoggedIn={false}
+          onOpenTeacherLogin={() => setIsTeacherAuthModalOpen(true)}
+          onTeacherLogout={handleTeacherLogout}
+          loggedInTeacher={null}
+        />
+
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <StudentGate
+            onStudentVerified={handleStudentVerified}
+            onOpenTeacherLogin={() => setIsTeacherAuthModalOpen(true)}
+          />
+        </main>
+
+        <TeacherAuthModal
+          isOpen={isTeacherAuthModalOpen}
+          onClose={() => setIsTeacherAuthModalOpen(false)}
+          onSuccess={handleTeacherLoginSuccess}
+        />
+
+        <Footer
+          onOpenTeacherLogin={() => setIsTeacherAuthModalOpen(true)}
+          isTeacherLoggedIn={false}
+          onOpenAdmin={() => setIsTeacherAuthModalOpen(true)}
+          onTeacherLogout={handleTeacherLogout}
+        />
+      </div>
+    );
+  }
+
+  // Active student properties
+  const isStudentGrade10 = currentStudent?.grade.toLowerCase() === 'grade 10';
+  const studentHasNoSection = currentStudent
+    ? currentStudent.section.toLowerCase() === 'no section' || !currentStudent.section
+    : false;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
@@ -122,24 +252,40 @@ export default function App() {
         currentView={currentView}
         onNavigate={(view) => {
           setCurrentView(view);
-          if (view === 'grades') {
-            // Keep grade or reset if user clicks header button
-            if (!selectedGrade) {
-              setSelectedGrade(null);
+          if (view === 'grades' && currentStudent) {
+            // Return to their assigned grade
+            if (studentHasNoSection) {
+              setSelectedGrade(currentStudent.grade);
               setSelectedSection(null);
+            } else {
+              setSelectedGrade(currentStudent.grade);
+              setSelectedSection(currentStudent.section);
             }
           }
         }}
-        classes={classes}
+        classes={authorizedClasses}
         currentTime={currentTime}
         isTeacherLoggedIn={isTeacherLoggedIn}
         onOpenTeacherLogin={() => setIsTeacherAuthModalOpen(true)}
         onTeacherLogout={handleTeacherLogout}
         onSearchSelect={(c) => handleJumpToClassRoom(c.grade, c.section)}
+        currentStudent={currentStudent}
+        onLogoutStudent={handleStudentLogout}
+        loggedInTeacher={loggedInTeacher}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+        {/* Verified Student Banner */}
+        {currentStudent && !isTeacherLoggedIn && (
+          <StudentBanner
+            student={currentStudent}
+            currentActiveTab={grade10Tab}
+            onSwitchTab={isStudentGrade10 ? handleSwitchGrade10Tab : undefined}
+            onLogoutStudent={handleStudentLogout}
+          />
+        )}
+
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-4">
             <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-700 rounded-full animate-spin"></div>
@@ -156,17 +302,62 @@ export default function App() {
             preselectedGrade={selectedGrade || undefined}
             preselectedSection={selectedSection || undefined}
             onCloseAdmin={() => setCurrentView('grades')}
+            loggedInTeacher={loggedInTeacher}
           />
         ) : currentView === 'live' ? (
-          /* Live Now Broadcast View */
+          /* Live Now Broadcast View (Filtered to student's authorized classes) */
           <LiveClassesView
-            classes={classes}
+            classes={authorizedClasses}
             currentTime={currentTime}
             onSelectClassRoom={handleJumpToClassRoom}
             onBackToGrades={handleBackToGrades}
           />
-        ) : selectedGrade && selectedSection ? (
-          /* Step 3: Classroom View for Selected Section */
+        ) : currentStudent && !isTeacherLoggedIn ? (
+          /* Student Tailored View */
+          studentHasNoSection ? (
+            /* Student has 'No Section' -> Show all sections for their grade, or classroom if clicked */
+            selectedSection ? (
+              <ClassroomView
+                gradeId={selectedGrade || currentStudent.grade}
+                sectionLetter={selectedSection}
+                onBackToSections={handleBackToSections}
+                onBackToGrades={handleBackToGrades}
+                classes={authorizedClasses}
+                currentTime={currentTime}
+                isTeacherLoggedIn={false}
+                onOpenCreateClass={() => {}}
+                allowBackToGrades={false}
+                allowBackToSections={true}
+                isGrade10Student={isStudentGrade10}
+              />
+            ) : (
+              <SectionSelector
+                gradeId={selectedGrade || currentStudent.grade}
+                onBackToGrades={handleBackToGrades}
+                onSelectSection={handleSelectSection}
+                classes={authorizedClasses}
+                currentTime={currentTime}
+                allowBackToGrades={false}
+              />
+            )
+          ) : (
+            /* Student is assigned to a specific section */
+            <ClassroomView
+              gradeId={selectedGrade || currentStudent.grade}
+              sectionLetter={selectedSection || currentStudent.section}
+              onBackToSections={handleBackToSections}
+              onBackToGrades={handleBackToGrades}
+              classes={authorizedClasses}
+              currentTime={currentTime}
+              isTeacherLoggedIn={false}
+              onOpenCreateClass={() => {}}
+              allowBackToGrades={false}
+              allowBackToSections={false}
+              isGrade10Student={isStudentGrade10}
+            />
+          )
+        ) : isTeacherLoggedIn && selectedGrade && selectedSection ? (
+          /* Teacher: Classroom View for Selected Section */
           <ClassroomView
             gradeId={selectedGrade}
             sectionLetter={selectedSection}
@@ -174,26 +365,33 @@ export default function App() {
             onBackToGrades={handleBackToGrades}
             classes={classes}
             currentTime={currentTime}
-            isTeacherLoggedIn={isTeacherLoggedIn}
-            onOpenCreateClass={() => {
-              setCurrentView('admin');
-            }}
+            isTeacherLoggedIn={true}
+            onOpenCreateClass={() => setCurrentView('admin')}
+            allowBackToGrades={true}
+            allowBackToSections={true}
           />
-        ) : selectedGrade ? (
-          /* Step 2: Sections List (A to Z) for Selected Grade */
+        ) : isTeacherLoggedIn && selectedGrade ? (
+          /* Teacher: Sections List for Selected Grade */
           <SectionSelector
             gradeId={selectedGrade}
             onBackToGrades={handleBackToGrades}
             onSelectSection={handleSelectSection}
             classes={classes}
             currentTime={currentTime}
+            allowBackToGrades={true}
           />
-        ) : (
-          /* Step 1: Grades Catalog (KG1 to Grade 12) */
+        ) : isTeacherLoggedIn ? (
+          /* Teacher Only: Grades Catalog (KG 1 to Grade 12, Pure AP) */
           <GradeSelector
             onSelectGrade={handleSelectGrade}
             classes={classes}
             currentTime={currentTime}
+          />
+        ) : (
+          /* Default for all students / visitors: Enter ID/Iqama form */
+          <StudentGate
+            onStudentVerified={handleStudentVerified}
+            onOpenTeacherLogin={() => setIsTeacherAuthModalOpen(true)}
           />
         )}
       </main>
@@ -205,7 +403,7 @@ export default function App() {
         onSuccess={handleTeacherLoginSuccess}
       />
 
-      {/* Footer with Small Teacher Admin access */}
+      {/* Footer */}
       <Footer
         onOpenTeacherLogin={() => setIsTeacherAuthModalOpen(true)}
         isTeacherLoggedIn={isTeacherLoggedIn}

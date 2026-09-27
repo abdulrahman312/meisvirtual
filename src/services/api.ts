@@ -210,13 +210,35 @@ export async function clearAllClasses(): Promise<void> {
   }
 }
 
+import { verifyTeacherByUsername } from './teacherService';
+
 /**
- * Teacher login authentication
+ * Teacher login authentication by Classera Username
  */
-export async function loginTeacher(password: string): Promise<{ success: boolean; name?: string; error?: string }> {
-  const validPassword = 'Meis13579';
-  if (password.trim() === validPassword) {
-    return { success: true, name: 'Faculty & Teacher Administration' };
+export async function loginTeacher(
+  username: string
+): Promise<{ success: boolean; name?: string; username?: string; error?: string }> {
+  // Support master code fallback
+  if (username.trim() === 'Meis13579') {
+    return {
+      success: true,
+      name: 'Faculty & Teacher Administration',
+      username: 'faculty_admin',
+    };
   }
-  return { success: false, error: 'Incorrect password. Please enter the authorized faculty access code.' };
+
+  const result = await verifyTeacherByUsername(username);
+  if (result.success && result.teacher) {
+    return {
+      success: true,
+      name: result.teacher.name,
+      username: result.teacher.username,
+    };
+  }
+
+  return {
+    success: false,
+    error: result.error || 'Invalid Classera username. Please verify your credentials.',
+  };
 }
+
