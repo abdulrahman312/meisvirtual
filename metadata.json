@@ -1,0 +1,6 @@
+{
+  "name": "MEIS Virtual Classroom Portal",
+  "description": "Virtual classroom portal for students and teachers to access and manage live Zoom classes from KG1 to Grade 12.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

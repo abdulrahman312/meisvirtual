@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "virtualClass": {
+      "title": "VirtualClass",
+      "description": "A scheduled virtual classroom session with Zoom meeting links for students",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the class session"
+        },
+        "grade": {
+          "type": "string",
+          "description": "School grade level from KG1 to Grade 12"
+        },
+        "section": {
+          "type": "string",
+          "description": "Section letter from A to Z"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Academic subject name"
+        },
+        "teacherName": {
+          "type": "string",
+          "description": "Name of the presiding teacher"
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Class date in YYYY-MM-DD format"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Class start time in HH:MM format"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Class finish time in HH:MM format"
+        },
+        "zoomUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Zoom or external meeting join link"
+        },
+        "meetingId": {
+          "type": "string",
+          "description": "Meeting ID for direct entry"
+        },
+        "passcode": {
+          "type": "string",
+          "description": "Meeting room passcode"
+        },
+        "topic": {
+          "type": "string",
+          "description": "Lesson topic or objective"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Teacher instructions for students"
+        },
+        "colorTheme": {
+          "type": "string",
+          "description": "UI accent color badge"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": [
+        "grade",
+        "section",
+        "subject",
+        "teacherName",
+        "date",
+        "startTime",
+        "endTime",
+        "zoomUrl"
+      ]
+    }
+  },
+  "firestore": {
+    "/classes/{classId}": {
+      "schema": {
+        "$ref": "#/entities/virtualClass"
+      },
+      "description": "Collection of all virtual classes across KG1 to Grade 12"
+    }
+  }
+}
