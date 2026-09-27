@@ -27,7 +27,7 @@ import {
   Layers,
   GraduationCap
 } from 'lucide-react';
-import { createClass, updateClass, deleteClass, clearAllClasses } from '../services/api';
+import { createClass, updateClass, deleteClass } from '../services/api';
 import { SchoolLogo } from './SchoolLogo';
 
 interface TeacherAdminPanelProps {
@@ -60,15 +60,15 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
 
   // Form state
   const todayStr = currentTime.toISOString().split('T')[0];
-  const [formGrade, setFormGrade] = useState<string>(preselectedGrade || 'Grade 10');
+  const [formGrade, setFormGrade] = useState<string>(preselectedGrade || 'Grade 1');
   const [formSection, setFormSection] = useState<string>(preselectedSection || 'A');
-  const [formSubject, setFormSubject] = useState<string>('Mathematics');
+  const [formSubject, setFormSubject] = useState<string>('');
   const [customSubject, setCustomSubject] = useState<string>('');
-  const [formTeacher, setFormTeacher] = useState<string>('Dr. Tariq Al-Hassan');
+  const [formTeacher, setFormTeacher] = useState<string>('');
   const [formDate, setFormDate] = useState<string>(todayStr);
-  const [formStartTime, setFormStartTime] = useState<string>('09:00');
-  const [formEndTime, setFormEndTime] = useState<string>('09:45');
-  const [formZoomUrl, setFormZoomUrl] = useState<string>('https://zoom.us/j/84930219482');
+  const [formStartTime, setFormStartTime] = useState<string>('');
+  const [formEndTime, setFormEndTime] = useState<string>('');
+  const [formZoomUrl, setFormZoomUrl] = useState<string>('');
   const [formMeetingId, setFormMeetingId] = useState<string>('');
   const [formPasscode, setFormPasscode] = useState<string>('');
   const [formTopic, setFormTopic] = useState<string>('');
@@ -101,25 +101,15 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
 
   const handleOpenCreateModal = (presetGrade?: string, presetSec?: string) => {
     setEditingClassId(null);
-    setFormGrade(presetGrade || preselectedGrade || 'Grade 10');
+    setFormGrade(presetGrade || preselectedGrade || 'Grade 1');
     setFormSection(presetSec || preselectedSection || 'A');
-    setFormSubject('Mathematics');
+    setFormSubject('');
     setCustomSubject('');
+    setFormTeacher('');
     setFormDate(todayStr);
-    
-    // Default start time: rounded to next 30 min from now
-    const now = new Date(currentTime);
-    const m = now.getMinutes();
-    const nextH = m > 30 ? (now.getHours() + 1) % 24 : now.getHours();
-    const nextM = m > 30 ? 0 : 30;
-    const startStr = `${String(nextH).padStart(2, '0')}:${String(nextM).padStart(2, '0')}`;
-    const endH = (nextH + (nextM + 45 >= 60 ? 1 : 0)) % 24;
-    const endM = (nextM + 45) % 60;
-    const endStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-    
-    setFormStartTime(startStr);
-    setFormEndTime(endStr);
-    setFormZoomUrl('https://zoom.us/j/');
+    setFormStartTime('');
+    setFormEndTime('');
+    setFormZoomUrl('');
     setFormMeetingId('');
     setFormPasscode('');
     setFormTopic('');
@@ -187,19 +177,6 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
     }
   };
 
-  const handleClearAll = async () => {
-    if (!window.confirm('Are you sure you want to delete ALL classes from the database? This cannot be undone.')) {
-      return;
-    }
-    try {
-      await clearAllClasses();
-      setFeedbackMsg({ type: 'success', text: 'All classes have been cleared.' });
-      onRefresh();
-    } catch (err: any) {
-      setFeedbackMsg({ type: 'error', text: err.message || 'Failed to clear classes.' });
-    }
-  };
-
   const handleSaveClass = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -255,15 +232,6 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
     }
   };
 
-  // Quick preset duration adder
-  const setDuration = (minutes: number) => {
-    const [h, m] = formStartTime.split(':').map(Number);
-    const totalMinutes = h * 60 + m + minutes;
-    const newH = Math.floor(totalMinutes / 60) % 24;
-    const newM = totalMinutes % 60;
-    setFormEndTime(`${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`);
-  };
-
   // Filtered classes for the table
   const filteredClasses = classes.filter((c) => {
     // Grade filter
@@ -312,23 +280,12 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
               Virtual Classroom Manager
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Create and schedule virtual Zoom classes for any Grade (KG1–G12) and Section (A–Z). Completed classes lock automatically.
+              Create and schedule virtual Zoom classes for any Grade (KG 1–G12, Pure AP) and Section (A–Z). Completed classes lock automatically.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          {classes.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              title="Delete all scheduled classes"
-              className="px-3 py-2 text-xs font-medium text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors flex items-center gap-1.5 border border-rose-200/80"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear All Classes</span>
-            </button>
-          )}
-
           <button
             onClick={() => handleOpenCreateModal()}
             className="px-4 py-2 text-xs font-bold text-white bg-indigo-700 hover:bg-indigo-800 active:bg-indigo-900 rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2"
@@ -607,7 +564,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                   >
                     {ALL_GRADES.map((g) => (
                       <option key={g.id} value={g.id}>
-                        {g.label} ({g.description})
+                        {g.label}
                       </option>
                     ))}
                   </select>
@@ -641,8 +598,10 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                   <select
                     value={formSubject}
                     onChange={(e) => setFormSubject(e.target.value)}
+                    required
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-hidden mb-2"
                   >
+                    <option value="" disabled>Select Subject</option>
                     {POPULAR_SUBJECTS.map((sub) => (
                       <option key={sub} value={sub}>
                         {sub}
@@ -670,7 +629,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                     type="text"
                     value={formTeacher}
                     onChange={(e) => setFormTeacher(e.target.value)}
-                    placeholder="e.g. Dr. Sarah Al-Mansoor"
+                    placeholder="Enter teacher name"
                     required
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white outline-hidden"
                   />
@@ -718,22 +677,8 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                   />
                 </div>
 
-                {/* Duration Presets */}
-                <div className="sm:col-span-3 flex items-center gap-2 pt-1">
-                  <span className="text-slate-400 text-[11px]">Quick Durations:</span>
-                  {[30, 40, 45, 60].map((mins) => (
-                    <button
-                      key={mins}
-                      type="button"
-                      onClick={() => setDuration(mins)}
-                      className="px-2 py-0.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded text-[11px] font-medium transition-colors"
-                    >
-                      +{mins} min
-                    </button>
-                  ))}
-                  <span className="text-[11px] text-slate-400 ml-auto">
-                    Note: Link locks automatically when End Time passes.
-                  </span>
+                <div className="sm:col-span-3 text-[11px] text-slate-400">
+                  Note: Link locks automatically when End Time passes.
                 </div>
               </div>
 
@@ -747,7 +692,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                     type="url"
                     value={formZoomUrl}
                     onChange={(e) => handleZoomUrlChange(e.target.value)}
-                    placeholder="https://zoom.us/j/1234567890?pwd=..."
+                    placeholder="Paste Zoom meeting link or URL (https://zoom.us/...)"
                     required
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white outline-hidden font-mono"
                   />
@@ -765,7 +710,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                       type="text"
                       value={formMeetingId}
                       onChange={(e) => setFormMeetingId(e.target.value)}
-                      placeholder="e.g. 849 3021 9482"
+                      placeholder="Enter meeting ID"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white outline-hidden font-mono"
                     />
                   </div>
@@ -778,7 +723,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                       type="text"
                       value={formPasscode}
                       onChange={(e) => setFormPasscode(e.target.value)}
-                      placeholder="e.g. Math2026"
+                      placeholder="Enter passcode"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white outline-hidden font-mono"
                     />
                   </div>
@@ -794,7 +739,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                   type="text"
                   value={formTopic}
                   onChange={(e) => setFormTopic(e.target.value)}
-                  placeholder="e.g. Chapter 4: Photosynthesis & Light Reactions"
+                  placeholder="Enter lesson topic or objective (optional)"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white outline-hidden"
                 />
               </div>
@@ -807,7 +752,7 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   rows={2}
-                  placeholder="e.g. Please bring your geometry box and textbook page 84. Keep cameras on."
+                  placeholder="Enter instructions for students (optional)"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white outline-hidden"
                 />
               </div>

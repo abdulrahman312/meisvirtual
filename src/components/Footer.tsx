@@ -48,7 +48,6 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-1.5 text-xs text-slate-500">
               <li>• Classes automatically close after scheduled end time.</li>
-              <li>• Keep camera enabled with school uniform attire.</li>
               <li>• Display full student name upon entering Zoom room.</li>
               <li>• Passcodes are unique to each class period.</li>
             </ul>

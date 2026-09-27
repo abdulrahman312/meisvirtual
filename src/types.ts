@@ -9,20 +9,22 @@ export interface GradeDefinition {
 }
 
 export const ALL_GRADES: GradeDefinition[] = [
-  { id: 'KG1', label: 'KG 1', stage: 'kindergarten', numericOrder: 0, description: 'Early Childhood & Foundation' },
-  { id: 'KG2', label: 'KG 2', stage: 'kindergarten', numericOrder: 1, description: 'Kindergarten & Pre-Primary' },
-  { id: 'Grade 1', label: 'Grade 1', stage: 'elementary', numericOrder: 2, description: 'Primary Foundation' },
-  { id: 'Grade 2', label: 'Grade 2', stage: 'elementary', numericOrder: 3, description: 'Primary Elementary' },
-  { id: 'Grade 3', label: 'Grade 3', stage: 'elementary', numericOrder: 4, description: 'Intermediate Primary' },
-  { id: 'Grade 4', label: 'Grade 4', stage: 'elementary', numericOrder: 5, description: 'Upper Elementary' },
-  { id: 'Grade 5', label: 'Grade 5', stage: 'elementary', numericOrder: 6, description: 'Elementary Graduation Year' },
-  { id: 'Grade 6', label: 'Grade 6', stage: 'middle', numericOrder: 7, description: 'Junior Middle School' },
-  { id: 'Grade 7', label: 'Grade 7', stage: 'middle', numericOrder: 8, description: 'Middle School Explorer' },
-  { id: 'Grade 8', label: 'Grade 8', stage: 'middle', numericOrder: 9, description: 'Middle School Prep' },
-  { id: 'Grade 9', label: 'Grade 9', stage: 'high', numericOrder: 10, description: 'Freshman High School' },
-  { id: 'Grade 10', label: 'Grade 10', stage: 'high', numericOrder: 11, description: 'Sophomore High School' },
-  { id: 'Grade 11', label: 'Grade 11', stage: 'high', numericOrder: 12, description: 'Junior High & Advanced Studies' },
-  { id: 'Grade 12', label: 'Grade 12', stage: 'high', numericOrder: 13, description: 'Senior High School & AP / Diplomas' },
+  { id: 'KG 1', label: 'KG 1', stage: 'kindergarten', numericOrder: 0, description: 'KG 1' },
+  { id: 'KG 2', label: 'KG 2', stage: 'kindergarten', numericOrder: 1, description: 'KG 2' },
+  { id: 'KG 3', label: 'KG 3', stage: 'kindergarten', numericOrder: 2, description: 'KG 3' },
+  { id: 'Grade 1', label: 'Grade 1', stage: 'elementary', numericOrder: 3, description: 'Grade 1' },
+  { id: 'Grade 2', label: 'Grade 2', stage: 'elementary', numericOrder: 4, description: 'Grade 2' },
+  { id: 'Grade 3', label: 'Grade 3', stage: 'elementary', numericOrder: 5, description: 'Grade 3' },
+  { id: 'Grade 4', label: 'Grade 4', stage: 'elementary', numericOrder: 6, description: 'Grade 4' },
+  { id: 'Grade 5', label: 'Grade 5', stage: 'elementary', numericOrder: 7, description: 'Grade 5' },
+  { id: 'Grade 6', label: 'Grade 6', stage: 'middle', numericOrder: 8, description: 'Grade 6' },
+  { id: 'Grade 7', label: 'Grade 7', stage: 'middle', numericOrder: 9, description: 'Grade 7' },
+  { id: 'Grade 8', label: 'Grade 8', stage: 'middle', numericOrder: 10, description: 'Grade 8' },
+  { id: 'Grade 9', label: 'Grade 9', stage: 'high', numericOrder: 11, description: 'Grade 9' },
+  { id: 'Grade 10', label: 'Grade 10', stage: 'high', numericOrder: 12, description: 'Grade 10' },
+  { id: 'Grade 11', label: 'Grade 11', stage: 'high', numericOrder: 13, description: 'Grade 11' },
+  { id: 'Grade 12', label: 'Grade 12', stage: 'high', numericOrder: 14, description: 'Grade 12' },
+  { id: 'Pure AP', label: 'Pure AP', stage: 'high', numericOrder: 15, description: 'Pure AP' },
 ];
 
 export const ALL_SECTIONS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)); // 'A' to 'Z'
@@ -134,4 +136,11 @@ export const POPULAR_SUBJECTS = [
   'Physical Education',
   'French Language',
   'Economics & Business',
+  'AP Calculus BC',
+  'AP Calculus AB',
+  'AP Physics',
+  'AP Chemistry',
+  'AP Biology',
+  'AP Computer Science',
+  'AP Macroeconomics',
 ];

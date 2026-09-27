@@ -56,10 +56,10 @@ export const GradeSelector: React.FC<GradeSelectorProps> = ({
 
   const stageTabs: { id: SchoolStage; label: string; count: number }[] = [
     { id: 'all', label: 'All Grades', count: ALL_GRADES.length },
-    { id: 'kindergarten', label: 'Kindergarten (KG)', count: 2 },
-    { id: 'elementary', label: 'Elementary (Grades 1-5)', count: 5 },
-    { id: 'middle', label: 'Middle School (Grades 6-8)', count: 3 },
-    { id: 'high', label: 'High School (Grades 9-12)', count: 4 },
+    { id: 'kindergarten', label: 'Kindergarten', count: 3 },
+    { id: 'elementary', label: 'Elementary', count: 5 },
+    { id: 'middle', label: 'Middle School', count: 3 },
+    { id: 'high', label: 'High School', count: 5 },
   ];
 
   return (
@@ -156,16 +156,18 @@ export const GradeSelector: React.FC<GradeSelectorProps> = ({
                         ? 'bg-amber-50 text-amber-800 border border-amber-200/80 group-hover:bg-amber-100'
                         : grade.stage === 'middle'
                         ? 'bg-teal-50 text-teal-800 border border-teal-200/80 group-hover:bg-teal-100'
+                        : grade.id === 'Pure AP'
+                        ? 'bg-purple-50 text-purple-800 border border-purple-200/80 group-hover:bg-purple-100'
                         : 'bg-indigo-50 text-indigo-800 border border-indigo-200/80 group-hover:bg-indigo-100'
                     }`}>
-                      {grade.id.replace('Grade ', 'G')}
+                      {grade.id === 'Pure AP' ? 'AP' : grade.id.replace('Grade ', 'G')}
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
                         {grade.label}
                       </h3>
                       <p className="text-xs text-slate-500 capitalize">
-                        {grade.stage} School
+                        {grade.id === 'Pure AP' ? 'Advanced Placement' : `${grade.stage} School`}
                       </p>
                     </div>
                   </div>

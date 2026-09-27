@@ -55,7 +55,8 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
   // Filter classes for this grade and section
   const sectionClasses = classes.filter(
     (c) =>
-      c.grade.toLowerCase() === gradeId.toLowerCase() &&
+      (c.grade.toLowerCase() === gradeId.toLowerCase() ||
+        c.grade.replace(/\s+/g, '').toLowerCase() === gradeId.replace(/\s+/g, '').toLowerCase()) &&
       c.section.toUpperCase() === sectionLetter.toUpperCase()
   );
 

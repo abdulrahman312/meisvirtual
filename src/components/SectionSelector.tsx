@@ -27,15 +27,23 @@ export const SectionSelector: React.FC<SectionSelectorProps> = ({
 }) => {
   const [filterActiveOnly, setFilterActiveOnly] = useState(false);
 
-  const gradeDef = ALL_GRADES.find((g) => g.id.toLowerCase() === gradeId.toLowerCase()) || {
+  const gradeDef = ALL_GRADES.find(
+    (g) =>
+      g.id.toLowerCase() === gradeId.toLowerCase() ||
+      g.id.replace(/\s+/g, '').toLowerCase() === gradeId.replace(/\s+/g, '').toLowerCase()
+  ) || {
     id: gradeId,
     label: gradeId,
-    description: 'School Grade Level',
+    description: gradeId,
     stage: 'general',
   };
 
   // Get all classes belonging to this grade
-  const gradeClasses = classes.filter((c) => c.grade.toLowerCase() === gradeId.toLowerCase());
+  const gradeClasses = classes.filter(
+    (c) =>
+      c.grade.toLowerCase() === gradeId.toLowerCase() ||
+      c.grade.replace(/\s+/g, '').toLowerCase() === gradeId.replace(/\s+/g, '').toLowerCase()
+  );
 
   // Helper to get stats for a particular section
   const getSectionStats = (sectionLetter: string) => {
