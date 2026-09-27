@@ -54,6 +54,9 @@ export interface ClassStatusInfo {
   statusLabel: string;
   detail: string;
   canJoin: boolean;
+  isWithin10Minutes: boolean;
+  unlockTimeFormatted?: string;
+  minutesUntilStart?: number;
 }
 
 /**
@@ -70,6 +73,7 @@ export function getClassStatus(c: VirtualClass, referenceDate: Date = new Date()
   const nowMs = referenceDate.getTime();
   const startMs = startDateTime.getTime();
   const endMs = endDateTime.getTime();
+  const tenMinutesMs = 10 * 60 * 1000;
 
   if (nowMs > endMs) {
     return {
@@ -77,6 +81,7 @@ export function getClassStatus(c: VirtualClass, referenceDate: Date = new Date()
       statusLabel: 'Concluded',
       detail: `Ended at ${format12HourTime(c.endTime)}`,
       canJoin: false,
+      isWithin10Minutes: false,
     };
   }
 
@@ -87,11 +92,21 @@ export function getClassStatus(c: VirtualClass, referenceDate: Date = new Date()
       statusLabel: 'Live Now',
       detail: `Ends in ${diffMinutes} min${diffMinutes === 1 ? '' : 's'}`,
       canJoin: true,
+      isWithin10Minutes: true,
     };
   }
 
   // Upcoming
-  const diffStartMinutes = Math.round((startMs - nowMs) / (1000 * 60));
+  const diffStartMs = startMs - nowMs;
+  const diffStartMinutes = Math.max(0, Math.round(diffStartMs / (1000 * 60)));
+  const isWithin10Minutes = diffStartMs <= tenMinutesMs && diffStartMs >= 0;
+
+  // Calculate 10 minutes prior to start time
+  const unlockDate = new Date(startDateTime.getTime() - tenMinutesMs);
+  const unlockH = String(unlockDate.getHours()).padStart(2, '0');
+  const unlockM = String(unlockDate.getMinutes()).padStart(2, '0');
+  const unlockTimeFormatted = format12HourTime(`${unlockH}:${unlockM}`);
+
   let detail = `Starts at ${format12HourTime(c.startTime)}`;
   if (diffStartMinutes > 0 && diffStartMinutes < 60) {
     detail = `Starts in ${diffStartMinutes}m`;
@@ -105,7 +120,10 @@ export function getClassStatus(c: VirtualClass, referenceDate: Date = new Date()
     status: 'upcoming',
     statusLabel: 'Upcoming',
     detail,
-    canJoin: false, // User requested: class join is accessible when in timing, disabled after
+    canJoin: isWithin10Minutes, // Active ONLY 10 minutes before start time
+    isWithin10Minutes,
+    unlockTimeFormatted,
+    minutesUntilStart: diffStartMinutes,
   };
 }
 

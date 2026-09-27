@@ -99,9 +99,27 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
     });
   }
 
-  // Sort by date, then by startTime
+  // Sort classes in order of time:
+  // 1. Active Live classes ALWAYS on top
+  // 2. Upcoming classes before ended classes
+  // 3. Chronological by date (Today before Tomorrow)
+  // 4. Chronological by start time (Soonest / next upcoming class first)
   displayedClasses.sort((a, b) => {
+    const statusA = getClassStatus(a, currentTime);
+    const statusB = getClassStatus(b, currentTime);
+
+    // Live classes always on top
+    if (statusA.status === 'live' && statusB.status !== 'live') return -1;
+    if (statusB.status === 'live' && statusA.status !== 'live') return 1;
+
+    // Upcoming before ended (if teacher is viewing ended classes)
+    if (statusA.status === 'upcoming' && statusB.status === 'ended') return -1;
+    if (statusB.status === 'upcoming' && statusA.status === 'ended') return 1;
+
+    // Date order
     if (a.date !== b.date) return a.date.localeCompare(b.date);
+
+    // Start time order (earliest first)
     return a.startTime.localeCompare(b.startTime);
   });
 
@@ -506,7 +524,7 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
                       </p>
                     </div>
                     
-                    {copiedField?.startsWith('link-') && (
+                    {isTeacherLoggedIn && copiedField?.startsWith('link-') && (
                       <div className="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
                         <Check className="w-3 h-3" />
                         <span>Meeting URL copied to clipboard!</span>
@@ -515,7 +533,7 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
                   </div>
                 </div>
 
-                {/* Primary Action Button (CRITICAL REQUIREMENT: Concluded class is disabled!) */}
+                {/* Primary Action Button (Meeting unlocks 10 minutes before class) */}
                 <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
                   {/* Status explanation */}
                   <div className="text-xs text-slate-500">
@@ -529,10 +547,15 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
                         <ShieldAlert className="w-3.5 h-3.5 text-slate-400" />
                         <span>This class concluded at {format12HourTime(c.endTime)}. Zoom link is permanently disabled.</span>
                       </span>
+                    ) : status.canJoin ? (
+                      <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                        <span>Room open! Meeting starts at {format12HourTime(c.startTime)}.</span>
+                      </span>
                     ) : (
-                      <span className="text-indigo-700 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Scheduled to start at {format12HourTime(c.startTime)}.</span>
+                      <span className="text-slate-600 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Scheduled for {format12HourTime(c.startTime)}. Join button unlocks at {status.unlockTimeFormatted} (10m before).</span>
                       </span>
                     )}
                   </div>
@@ -553,47 +576,62 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
                     ) : isLive ? (
                       /* If Live: Prominent Enter Zoom Button */
                       <>
-                        <button
-                          onClick={() => handleCopy(c.zoomUrl, `link-${c.id}`)}
-                          className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
-                          title="Copy Zoom Link"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Copy Link</span>
-                        </button>
+                        {isTeacherLoggedIn && (
+                          <button
+                            onClick={() => handleCopy(c.zoomUrl, `link-${c.id}`)}
+                            className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                            title="Copy Zoom Link (Teacher Only)"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Copy Link</span>
+                          </button>
+                        )}
                         <a
                           href={c.zoomUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-md shadow-emerald-700/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 group"
+                          className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-md shadow-emerald-700/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
                         >
                           <Video className="w-4 h-4 text-emerald-100 group-hover:scale-110 transition-transform" />
                           <span>Enter Zoom Class Now</span>
                           <ExternalLink className="w-3.5 h-3.5 text-emerald-200" />
                         </a>
                       </>
-                    ) : (
-                      /* Upcoming: Class Starts Later */
+                    ) : status.canJoin || isTeacherLoggedIn ? (
+                      /* Upcoming and within 10 minutes of start time (or teacher preview): Button is ACTIVE */
                       <>
-                        <button
-                          onClick={() => handleCopy(c.zoomUrl, `link-${c.id}`)}
-                          className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
-                          title="Copy Link in Advance"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copy Link</span>
-                        </button>
+                        {isTeacherLoggedIn && (
+                          <button
+                            onClick={() => handleCopy(c.zoomUrl, `link-${c.id}`)}
+                            className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                            title="Copy Zoom Link (Teacher Only)"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Link</span>
+                          </button>
+                        )}
                         <a
                           href={c.zoomUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-indigo-900 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2"
+                          className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-indigo-900 active:bg-slate-950 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <Video className="w-3.5 h-3.5" />
-                          <span>Join Early Room ({format12HourTime(c.startTime)})</span>
+                          <span>Join Class ({format12HourTime(c.startTime)})</span>
                           <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                         </a>
                       </>
+                    ) : (
+                      /* Upcoming but MORE than 10 minutes before start: Button is INACTIVE / LOCKED */
+                      <button
+                        disabled
+                        aria-disabled="true"
+                        className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 border border-slate-300 text-slate-500 text-xs font-semibold rounded-lg cursor-not-allowed flex items-center justify-center gap-2 select-none"
+                        title={`Opens 10 minutes before scheduled start time (at ${status.unlockTimeFormatted})`}
+                      >
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Opens at {status.unlockTimeFormatted} (10m before)</span>
+                      </button>
                     )}
                   </div>
                 </div>

@@ -88,7 +88,7 @@ export default function App() {
     const isGrade10 = currentStudent.grade.toLowerCase() === 'grade 10';
     const hasNoSection = currentStudent.section.toLowerCase() === 'no section' || !currentStudent.section;
 
-    return classes.filter((c) => {
+    const studentClasses = classes.filter((c) => {
       // Finished classes should not be displayed to students - only upcoming and live classes
       const status = getClassStatus(c, currentTime);
       if (status.status === 'ended') {
@@ -107,6 +107,18 @@ export default function App() {
 
       if (hasNoSection) return true;
       return c.section.toUpperCase() === currentStudent.section.toUpperCase();
+    });
+
+    // Sort in order of time: Live classes first, then chronological by date & start time
+    return studentClasses.sort((a, b) => {
+      const statusA = getClassStatus(a, currentTime);
+      const statusB = getClassStatus(b, currentTime);
+
+      if (statusA.status === 'live' && statusB.status !== 'live') return -1;
+      if (statusB.status === 'live' && statusA.status !== 'live') return 1;
+
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.startTime.localeCompare(b.startTime);
     });
   }, [classes, isTeacherLoggedIn, currentStudent, currentTime]);
 
