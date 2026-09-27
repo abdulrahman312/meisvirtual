@@ -90,7 +90,7 @@ export const TeacherAuthModal: React.FC<TeacherAuthModalProps> = ({
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password (e.g. Meis13579)"
+                placeholder="Enter teacher password"
                 autoFocus
                 className="w-full pl-3.5 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-hidden transition-all text-slate-900"
               />
@@ -103,9 +103,6 @@ export const TeacherAuthModal: React.FC<TeacherAuthModalProps> = ({
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1.5">
-              Default school teacher authorization password is <span className="font-mono font-medium text-slate-600">Meis13579</span>
-            </p>
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-2.5">

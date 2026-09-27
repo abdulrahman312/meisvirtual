@@ -27,7 +27,7 @@ import {
   Layers,
   GraduationCap
 } from 'lucide-react';
-import { createClass, updateClass, deleteClass, resetDatabase } from '../services/api';
+import { createClass, updateClass, deleteClass, clearAllClasses } from '../services/api';
 import { SchoolLogo } from './SchoolLogo';
 
 interface TeacherAdminPanelProps {
@@ -187,16 +187,16 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
     }
   };
 
-  const handleResetData = async () => {
-    if (!window.confirm('Reset database to default sample schedule with active and upcoming classes?')) {
+  const handleClearAll = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL classes from the database? This cannot be undone.')) {
       return;
     }
     try {
-      await resetDatabase();
-      setFeedbackMsg({ type: 'success', text: 'Database reset to default school schedule.' });
+      await clearAllClasses();
+      setFeedbackMsg({ type: 'success', text: 'All classes have been cleared.' });
       onRefresh();
     } catch (err: any) {
-      setFeedbackMsg({ type: 'error', text: err.message || 'Failed to reset database.' });
+      setFeedbackMsg({ type: 'error', text: err.message || 'Failed to clear classes.' });
     }
   };
 
@@ -318,14 +318,16 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={handleResetData}
-            title="Reload default sample schedule"
-            className="px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset Samples</span>
-          </button>
+          {classes.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              title="Delete all scheduled classes"
+              className="px-3 py-2 text-xs font-medium text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors flex items-center gap-1.5 border border-rose-200/80"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear All Classes</span>
+            </button>
+          )}
 
           <button
             onClick={() => handleOpenCreateModal()}
