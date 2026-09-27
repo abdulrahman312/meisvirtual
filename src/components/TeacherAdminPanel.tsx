@@ -208,10 +208,10 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
       startTime: formStartTime,
       endTime: formEndTime,
       zoomUrl: formZoomUrl.trim(),
-      meetingId: formMeetingId.trim() || undefined,
-      passcode: formPasscode.trim() || undefined,
-      topic: formTopic.trim() || undefined,
-      notes: formNotes.trim() || undefined,
+      meetingId: formMeetingId.trim() || '',
+      passcode: formPasscode.trim() || '',
+      topic: formTopic.trim() || '',
+      notes: formNotes.trim() || '',
     };
 
     try {

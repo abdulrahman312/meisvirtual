@@ -128,6 +128,18 @@ export async function fetchClasses(): Promise<VirtualClass[]> {
   }
 }
 
+function sanitizeForFirestore<T extends Record<string, any>>(data: T): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [key, val] of Object.entries(data)) {
+    if (val !== undefined) {
+      clean[key] = val;
+    } else {
+      clean[key] = '';
+    }
+  }
+  return clean;
+}
+
 /**
  * Create a new virtual class in Cloud Firestore
  */
@@ -135,13 +147,17 @@ export async function createClass(classData: Omit<VirtualClass, 'id' | 'createdA
   const newId = `cls-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
   const item: VirtualClass = {
     ...classData,
+    meetingId: classData.meetingId || '',
+    passcode: classData.passcode || '',
+    topic: classData.topic || '',
+    notes: classData.notes || '',
     id: newId,
     createdAt: new Date().toISOString(),
   };
 
   const docRef = doc(db, COLLECTION_NAME, newId);
   try {
-    await setDoc(docRef, item);
+    await setDoc(docRef, sanitizeForFirestore(item));
     return item;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `${COLLECTION_NAME}/${newId}`);
@@ -154,7 +170,8 @@ export async function createClass(classData: Omit<VirtualClass, 'id' | 'createdA
 export async function updateClass(id: string, updates: Partial<VirtualClass>): Promise<VirtualClass> {
   const docRef = doc(db, COLLECTION_NAME, id);
   try {
-    await updateDoc(docRef, updates as any);
+    const cleanUpdates = sanitizeForFirestore(updates);
+    await updateDoc(docRef, cleanUpdates);
     return { ...updates, id } as VirtualClass;
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${COLLECTION_NAME}/${id}`);

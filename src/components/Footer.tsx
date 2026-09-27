@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, GraduationCap, ShieldCheck, HelpCircle, Sparkles } from 'lucide-react';
+import { Lock, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
 import { SchoolLogo } from './SchoolLogo';
 
 interface FooterProps {
@@ -95,11 +95,6 @@ export const Footer: React.FC<FooterProps> = ({
                 </button>
               </div>
             )}
-
-            <div className="pt-2 text-[11px] text-slate-400 flex items-center gap-1">
-              <HelpCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>Need help? Contact IT at <span className="font-medium text-slate-600">admin@meis-school.edu</span></span>
-            </div>
           </div>
 
         </div>
