@@ -5,7 +5,9 @@ import {
   POPULAR_SUBJECTS, 
   VirtualClass, 
   getClassStatus, 
-  format12HourTime 
+  format12HourTime,
+  convertTo24Hour,
+  parseFrom24Hour
 } from '../types';
 import { 
   PlusCircle, 
@@ -29,6 +31,7 @@ import {
 } from 'lucide-react';
 import { createClass, updateClass, deleteClass } from '../services/api';
 import { SchoolLogo } from './SchoolLogo';
+import { Time12Picker } from './Time12Picker';
 
 interface TeacherAdminPanelProps {
   classes: VirtualClass[];
@@ -62,14 +65,26 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
 
   // Form state
   const todayStr = currentTime.toISOString().split('T')[0];
+  const tomorrowDate = new Date(currentTime);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+
   const [formGrade, setFormGrade] = useState<string>(preselectedGrade || 'Grade 1');
   const [formSection, setFormSection] = useState<string>(preselectedSection || 'A');
   const [formSubject, setFormSubject] = useState<string>('');
   const [customSubject, setCustomSubject] = useState<string>('');
   const [formTeacher, setFormTeacher] = useState<string>(loggedInTeacher?.name || '');
   const [formDate, setFormDate] = useState<string>(todayStr);
-  const [formStartTime, setFormStartTime] = useState<string>('');
-  const [formEndTime, setFormEndTime] = useState<string>('');
+
+  // 12-Hour AM/PM Time State
+  const [startHour, setStartHour] = useState<string>('09');
+  const [startMinute, setStartMinute] = useState<string>('00');
+  const [startPeriod, setStartPeriod] = useState<'AM' | 'PM'>('AM');
+
+  const [endHour, setEndHour] = useState<string>('09');
+  const [endMinute, setEndMinute] = useState<string>('45');
+  const [endPeriod, setEndPeriod] = useState<'AM' | 'PM'>('AM');
+
   const [formZoomUrl, setFormZoomUrl] = useState<string>('');
   const [formMeetingId, setFormMeetingId] = useState<string>('');
   const [formPasscode, setFormPasscode] = useState<string>('');
@@ -90,8 +105,15 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
     // Automatically enter teacher name from the online sheet
     setFormTeacher(loggedInTeacher?.name || '');
     setFormDate(todayStr);
-    setFormStartTime('');
-    setFormEndTime('');
+
+    // Default 12-hour times: 9:00 AM - 9:45 AM
+    setStartHour('09');
+    setStartMinute('00');
+    setStartPeriod('AM');
+    setEndHour('09');
+    setEndMinute('45');
+    setEndPeriod('AM');
+
     setFormZoomUrl('');
     setFormMeetingId('');
     setFormPasscode('');
@@ -113,8 +135,17 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
     }
     setFormTeacher(c.teacherName);
     setFormDate(c.date);
-    setFormStartTime(c.startTime);
-    setFormEndTime(c.endTime);
+
+    const s = parseFrom24Hour(c.startTime);
+    setStartHour(s.hour);
+    setStartMinute(s.minute);
+    setStartPeriod(s.period);
+
+    const e = parseFrom24Hour(c.endTime);
+    setEndHour(e.hour);
+    setEndMinute(e.minute);
+    setEndPeriod(e.period);
+
     setFormZoomUrl(c.zoomUrl);
     setFormMeetingId(c.meetingId || '');
     setFormPasscode(c.passcode || '');
@@ -136,8 +167,17 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
     }
     setFormTeacher(c.teacherName);
     setFormDate(c.date);
-    setFormStartTime(c.startTime);
-    setFormEndTime(c.endTime);
+
+    const s = parseFrom24Hour(c.startTime);
+    setStartHour(s.hour);
+    setStartMinute(s.minute);
+    setStartPeriod(s.period);
+
+    const e = parseFrom24Hour(c.endTime);
+    setEndHour(e.hour);
+    setEndMinute(e.minute);
+    setEndPeriod(e.period);
+
     setFormZoomUrl(c.zoomUrl);
     setFormMeetingId(c.meetingId || '');
     setFormPasscode(c.passcode || '');
@@ -179,6 +219,18 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
       return;
     }
 
+    const startTimeToSave = convertTo24Hour(startHour, startMinute, startPeriod);
+    const endTimeToSave = convertTo24Hour(endHour, endMinute, endPeriod);
+
+    if (startTimeToSave >= endTimeToSave) {
+      alert(
+        `The End Time (${format12HourTime(endTimeToSave)}) must be later than the Start Time (${format12HourTime(
+          startTimeToSave
+        )}). Please verify your AM/PM and time selections.`
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setFeedbackMsg(null);
 
@@ -188,8 +240,8 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
       subject: subjectToSave,
       teacherName: formTeacher.trim(),
       date: formDate,
-      startTime: formStartTime,
-      endTime: formEndTime,
+      startTime: startTimeToSave,
+      endTime: endTimeToSave,
       zoomUrl: formZoomUrl.trim(),
       meetingId: formMeetingId.trim() || '',
       passcode: formPasscode.trim() || '',
@@ -628,49 +680,99 @@ export const TeacherAdminPanel: React.FC<TeacherAdminPanelProps> = ({
                 </div>
               </div>
 
-              {/* Date & Timings */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/80 p-4 rounded-xl border border-slate-200/80">
-                <div>
-                  <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Class Date *
-                  </label>
+              {/* Class Date Section */}
+              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <label className="block font-semibold text-slate-800 uppercase tracking-wider text-xs">
+                      Class Date *
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Select the scheduled session date
+                    </p>
+                  </div>
+                  {/* Quick Date Shortcuts */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFormDate(todayStr)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                        formDate === todayStr
+                          ? 'bg-indigo-700 text-white border-indigo-700 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormDate(tomorrowStr)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                        formDate === tomorrowStr
+                          ? 'bg-indigo-700 text-white border-indigo-700 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      Tomorrow
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-600 pointer-events-none">
+                    <Calendar className="w-4 h-4" />
+                  </div>
                   <input
                     type="date"
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs outline-hidden"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-hidden transition-all shadow-2xs"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Start Time *
-                  </label>
-                  <input
-                    type="time"
-                    value={formStartTime}
-                    onChange={(e) => setFormStartTime(e.target.value)}
+              {/* 12-Hour AM/PM Timings Section (2 Spacious Columns) */}
+              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200/80 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-indigo-700" />
+                    <span className="font-bold text-slate-800 text-xs uppercase tracking-wider">
+                      Class Timings (12-Hour AM / PM)
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200/80 px-2.5 py-1 rounded-lg tabular-nums">
+                    Scheduled: {format12HourTime(convertTo24Hour(startHour, startMinute, startPeriod))} – {format12HourTime(convertTo24Hour(endHour, endMinute, endPeriod))}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Time12Picker
+                    label="Class Start Time *"
+                    hour={startHour}
+                    minute={startMinute}
+                    period={startPeriod}
+                    onChangeHour={setStartHour}
+                    onChangeMinute={setStartMinute}
+                    onChangePeriod={setStartPeriod}
                     required
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs outline-hidden tabular-nums"
                   />
-                </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    End Time *
-                  </label>
-                  <input
-                    type="time"
-                    value={formEndTime}
-                    onChange={(e) => setFormEndTime(e.target.value)}
+                  <Time12Picker
+                    label="Class End Time *"
+                    hour={endHour}
+                    minute={endMinute}
+                    period={endPeriod}
+                    onChangeHour={setEndHour}
+                    onChangeMinute={setEndMinute}
+                    onChangePeriod={setEndPeriod}
                     required
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs outline-hidden tabular-nums"
                   />
                 </div>
 
-                <div className="sm:col-span-3 text-[11px] text-slate-400">
-                  Note: Link locks automatically when End Time passes.
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/70">
+                  <span>Note: Class links automatically close when the End Time passes.</span>
+                  <span className="font-medium text-slate-400">Timezone: School Local Time</span>
                 </div>
               </div>
 

@@ -85,11 +85,19 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
   ).length;
 
   // Apply date filter
-  const displayedClasses = sectionClasses.filter((c) => {
+  let displayedClasses = sectionClasses.filter((c) => {
     if (selectedDateFilter === 'today') return c.date === todayStr;
     if (selectedDateFilter === 'tomorrow') return c.date === tomorrowStr;
     return true;
   });
+
+  // If student is viewing, hide finished/concluded classes (only show upcoming and live)
+  if (!isTeacherLoggedIn) {
+    displayedClasses = displayedClasses.filter((c) => {
+      const status = getClassStatus(c, currentTime);
+      return status.status !== 'ended';
+    });
+  }
 
   // Sort by date, then by startTime
   displayedClasses.sort((a, b) => {
@@ -295,10 +303,14 @@ export const ClassroomView: React.FC<ClassroomViewProps> = ({
           </div>
           <div className="max-w-md mx-auto">
             <h3 className="text-base font-semibold text-slate-800">
-              No classes currently scheduled for Section {sectionLetter}
+              {!isTeacherLoggedIn
+                ? `No live or upcoming classes right now for Section ${sectionLetter}`
+                : `No classes currently scheduled for Section ${sectionLetter}`}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Your teachers have not uploaded any Zoom links for this section yet. Please check back shortly or select another section.
+              {!isTeacherLoggedIn
+                ? 'Only upcoming and live classes are displayed to students. Concluded classes are automatically hidden.'
+                : 'Your teachers have not uploaded any Zoom links for this section yet. Please check back shortly or select another section.'}
             </p>
           </div>
           {isTeacherLoggedIn && (

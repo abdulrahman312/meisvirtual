@@ -121,6 +121,47 @@ export function format12HourTime(time24: string): string {
   return `${h}:${m} ${ampm}`;
 }
 
+export function convertTo24Hour(
+  hour12: string | number,
+  minute: string | number,
+  period: 'AM' | 'PM'
+): string {
+  let h = typeof hour12 === 'number' ? hour12 : parseInt(hour12, 10);
+  if (isNaN(h) || h < 1 || h > 12) h = 12;
+  const m = typeof minute === 'number' ? minute : parseInt(minute, 10);
+  const mStr = isNaN(m) ? '00' : String(m).padStart(2, '0');
+
+  if (period === 'AM') {
+    if (h === 12) h = 0;
+  } else {
+    // PM
+    if (h !== 12) h += 12;
+  }
+
+  return `${String(h).padStart(2, '0')}:${mStr}`;
+}
+
+export function parseFrom24Hour(time24: string): { hour: string; minute: string; period: 'AM' | 'PM' } {
+  if (!time24 || !time24.includes(':')) {
+    return { hour: '09', minute: '00', period: 'AM' };
+  }
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  if (isNaN(h)) h = 9;
+  const m = parseInt(mStr, 10);
+  const minute = isNaN(m) ? '00' : String(m).padStart(2, '0');
+
+  const period: 'AM' | 'PM' = h >= 12 ? 'PM' : 'AM';
+  let hour12 = h % 12;
+  if (hour12 === 0) hour12 = 12;
+
+  return {
+    hour: String(hour12).padStart(2, '0'),
+    minute,
+    period,
+  };
+}
+
 export const POPULAR_SUBJECTS = [
   'Mathematics',
   'Advanced Physics',

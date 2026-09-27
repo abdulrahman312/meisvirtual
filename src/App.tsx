@@ -9,7 +9,7 @@ import { TeacherAuthModal } from './components/TeacherAuthModal';
 import { StudentGate } from './components/StudentGate';
 import { StudentBanner } from './components/StudentBanner';
 import { Footer } from './components/Footer';
-import { VirtualClass } from './types';
+import { VirtualClass, getClassStatus } from './types';
 import { fetchClasses, subscribeToClasses } from './services/api';
 import { 
   getStoredStudent, 
@@ -89,6 +89,12 @@ export default function App() {
     const hasNoSection = currentStudent.section.toLowerCase() === 'no section' || !currentStudent.section;
 
     return classes.filter((c) => {
+      // Finished classes should not be displayed to students - only upcoming and live classes
+      const status = getClassStatus(c, currentTime);
+      if (status.status === 'ended') {
+        return false;
+      }
+
       // Grade 10 students can see their grade 10 classes + all Pure AP classes
       if (isGrade10 && (c.grade.toLowerCase() === 'pure ap' || c.grade.toLowerCase() === 'grade 10')) {
         if (c.grade.toLowerCase() === 'pure ap') return true;
@@ -102,7 +108,7 @@ export default function App() {
       if (hasNoSection) return true;
       return c.section.toUpperCase() === currentStudent.section.toUpperCase();
     });
-  }, [classes, isTeacherLoggedIn, currentStudent]);
+  }, [classes, isTeacherLoggedIn, currentStudent, currentTime]);
 
   // Handlers for student verification
   const handleStudentVerified = (student: StudentRecord) => {
